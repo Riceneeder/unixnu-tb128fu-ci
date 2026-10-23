@@ -771,7 +771,8 @@ python3 - "${XNU_NATIVE_AES:-0}" "${XNU_NATIVE_AES_ARCHIVE:-$ROOT/build/software
   "$NATIVE_VIRTIO_CONSOLE" "$ROOT/build/virtio-mmio-console/libVirtioMmioConsole.a" \
   "$NATIVE_OFFLINE_GPU" "$ROOT/build/native-offline-gpu/libNativeOfflineGPU.late.a" \
   "$SHENG_PMGR" "$ROOT/build/sheng-platform-power/libShengPlatformPower.a" \
-  "${XNU_NATIVE_ADRENO:-0}" "$ROOT/build/adreno740/libAdreno740.a" <<'PY'
+  "${XNU_NATIVE_ADRENO:-0}" "$ROOT/build/adreno740/libAdreno740.a" \
+  "${XNU_NATIVE_UFS:-0}" "$ROOT/build/sheng-ufs/libShengUfs.a" <<'PY'
 import hashlib
 from pathlib import Path
 import sys
