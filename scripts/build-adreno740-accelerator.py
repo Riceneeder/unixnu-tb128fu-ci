@@ -2,16 +2,27 @@
 """Build the staged AGXAccelerator class (drivers/Adreno740/NativeAdrenoAccelerator.cpp) against the audited original
 IOAcceleratorES imports, as a "late" archive: its static initializer is removed from __mod_init_func and exported so the board
 probe runs it after the original IOGPUFamily kext has loaded. Same binding recipe as build-native-accelerator-abi.py (exact
-original constructor, destructor and metaclass addresses from build/gpu-analysis/ioaccelerator-base-abi.json)."""
+original constructor, destructor and metaclass addresses from build/gpu-analysis/ioaccelerator-base-abi.json). --component names
+another kernel GPU driver of components.toml with the same source (a device's Adreno650): its checkout and its archive."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
 import struct
 import subprocess
 import sys
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / 'build/adreno740-accelerator'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--component', default='Adreno740', help='the kernel GPU driver whose archive carries the class')
+options = parser.parse_args()
+spec = next((c for c in tomllib.loads((ROOT / 'components.toml').read_text())['component'] if c['id'] == options.component), None)
+if spec is None:
+    sys.exit(f'{options.component}: not in components.toml')
+DRIVER = ROOT / spec['path']
+NATIVE = ROOT / next(path for path in spec['outputs'] if path.endswith('.a'))
+OUT = ROOT / 'build' / (NATIVE.parent.name + '-accelerator')
 OUT.mkdir(exist_ok=True)
 sys.path.insert(0, str(ROOT / 'kits/XnuPrelink'))
 from native_prelink import macho
@@ -39,7 +50,7 @@ if plan['operational_overrides'] or plan['instance_bytes'] != 136 or plan['virtu
     sys.exit('The audited original base is not the expected 136-byte, 168-entry class without operational overrides')
 
 record = json.loads((ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/iokit/DEVELOPMENT/IOPlatformExpert.cpo.json').read_text().strip().rstrip(','))
-source = ROOT / 'drivers/Adreno740/NativeAdrenoAccelerator.cpp'
+source = DRIVER / 'NativeAdrenoAccelerator.cpp'
 obj = OUT / 'NativeAdrenoAccelerator.o'
 cmd, i, args = [], 0, record['arguments']
 while i < len(args):
@@ -95,11 +106,11 @@ def code(p):
 
 if code(obj) != code(late):
     sys.exit('Only the owned initializer registration may change')
-archive = OUT / 'libAdreno740Accelerator.late.a'
+archive = OUT / f'lib{options.component}Accelerator.late.a'
 archive.unlink(missing_ok=True)
 run(['xcrun', 'ar', 'rcs', archive, late, OUT / 'original-bindings.o'])
-# The kernel links libAdreno740.a; the staged class rides in it (its initializer is not in __mod_init_func).
-native = ROOT / 'build/adreno740/libAdreno740.a'
+# The kernel links the driver's archive (libAdreno740.a); the staged class rides in it (its initializer is not in __mod_init_func).
+native = NATIVE
 if native.exists():
     run(['xcrun', 'ar', 'rcs', native, late, OUT / 'original-bindings.o'])
 (OUT / 'build-report.json').write_text(json.dumps(dict(

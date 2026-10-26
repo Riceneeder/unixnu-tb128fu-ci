@@ -617,7 +617,7 @@ if [ "${XNU_SOURCE_CORECRYPTO14:-0}" = 1 ] && [ "$BOOTSTRAP" = 0 ]; then
     KERNEL_ARCHIVE_DEPENDENCIES="$KERNEL_ARCHIVE_DEPENDENCIES $ARMCPU_ARCHIVE"
   fi
   if [ "${XNU_NATIVE_UFS:-0}" = 1 ]; then
-    UFS_ARCHIVE=$ROOT/build/sheng-ufs/libShengUfs.a
+    UFS_ARCHIVE=${XNU_NATIVE_UFS_ARCHIVE:-$ROOT/build/sheng-ufs/libShengUfs.a}
     test -f "$UFS_ARCHIVE"
     KERNEL_EXTRA_ARCHIVES="$KERNEL_EXTRA_ARCHIVES -Wl,-force_load,$UFS_ARCHIVE"
     KERNEL_ARCHIVE_DEPENDENCIES="$KERNEL_ARCHIVE_DEPENDENCIES $UFS_ARCHIVE"
@@ -625,7 +625,7 @@ if [ "${XNU_SOURCE_CORECRYPTO14:-0}" = 1 ] && [ "$BOOTSTRAP" = 0 ]; then
   if [ "${XNU_NATIVE_ADRENO:-0}" = 1 ]; then
     # NativeAdreno plus its kits (scripts/build-native-adreno-kits.py). No personality is installed: the
     # board probe calls NativeAdrenoGmuContextBringup directly once it has powered the GPU CX domain.
-    ADRENO_ARCHIVE=$ROOT/build/adreno740/libAdreno740.a
+    ADRENO_ARCHIVE=${XNU_NATIVE_ADRENO_ARCHIVE:-$ROOT/build/adreno740/libAdreno740.a}
     test -f "$ADRENO_ARCHIVE"
     KERNEL_EXTRA_ARCHIVES="$KERNEL_EXTRA_ARCHIVES -Wl,-force_load,$ADRENO_ARCHIVE"
     KERNEL_ARCHIVE_DEPENDENCIES="$KERNEL_ARCHIVE_DEPENDENCIES $ADRENO_ARCHIVE"
@@ -710,7 +710,9 @@ import hashlib
 records = [json.loads(Path(p).with_name('bindings.json').read_text()) for p in sys.argv[1:]]
 for archive, record in zip(sys.argv[1:], records):
     path = Path(archive)
-    obj = path.with_name(path.stem.removeprefix('lib') + '.o')
+    # The archives carry the component names (libVirtioMmioBlock.a); the objects keep the runtime class names.
+    stem = path.stem.removeprefix('lib')
+    obj = path.with_name({'VirtioMmioBlock': 'NativeVirtioBlock', 'RamBlock': 'NativeRamBlock'}.get(stem, stem) + '.o')
     if hashlib.sha256(obj.read_bytes()).hexdigest() != record['compiled_object_sha256']:
         raise SystemExit('Re-audit the actual compiled storage object before linking')
 first, second = [record['bindings'] for record in records]
@@ -771,8 +773,8 @@ python3 - "${XNU_NATIVE_AES:-0}" "${XNU_NATIVE_AES_ARCHIVE:-$ROOT/build/software
   "$NATIVE_VIRTIO_CONSOLE" "$ROOT/build/virtio-mmio-console/libVirtioMmioConsole.a" \
   "$NATIVE_OFFLINE_GPU" "$ROOT/build/native-offline-gpu/libNativeOfflineGPU.late.a" \
   "$SHENG_PMGR" "$ROOT/build/sheng-platform-power/libShengPlatformPower.a" \
-  "${XNU_NATIVE_ADRENO:-0}" "$ROOT/build/adreno740/libAdreno740.a" \
-  "${XNU_NATIVE_UFS:-0}" "$ROOT/build/sheng-ufs/libShengUfs.a" <<'PY'
+  "${XNU_NATIVE_ADRENO:-0}" "${XNU_NATIVE_ADRENO_ARCHIVE:-$ROOT/build/adreno740/libAdreno740.a}" \
+  "${XNU_NATIVE_UFS:-0}" "${XNU_NATIVE_UFS_ARCHIVE:-$ROOT/build/sheng-ufs/libShengUfs.a}" <<'PY'
 import hashlib
 from pathlib import Path
 import sys

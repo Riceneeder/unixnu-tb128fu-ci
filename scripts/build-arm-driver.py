@@ -18,11 +18,23 @@ parser.add_argument('--negative-aes-kat', action='store_true', help='Isolated ow
 parser.add_argument('--verified-root', action='store_true', help='Authenticate all actual disk reads against an independently signed immutable policy')
 parser.add_argument('--verified-root-bundle', action='store_true', help='Select exactly one capacity-matching policy per device, then independently authenticate it')
 parser.add_argument('--negative-verified-block', action='store_true', help='Negative own-buffer control: corrupt only the completed DMA snapshot')
+parser.add_argument('--sm6225', action='store_true', help='Select the SM6225 bengal UFS host/GCC/SMMU constants of a NativeUfs source')
+parser.add_argument('--sm8250', action='store_true', help='Select the SM8250 kona UFS host/GCC/SMMU constants of a NativeUfs source')
+parser.add_argument('--probe-only', action='store_true', help='NativeUfs controller probes/adopt only; omit the block device and root publication')
+parser.add_argument('--no-verified-block', action='store_true', help='NativeUfs block device without the VerifiedRoot owner policies (link experiment)')
 args = parser.parse_args()
 identifier = aliases.get(args.component, args.component)
 metadata = catalog.get(identifier, {})
-runtime = metadata.get('legacy_name', identifier)
+# The runtime class the source builds: an official component's legacy name, else a device component's first runtime identifier
+# (PipaUfs builds NativeUfs).
+runtime = metadata.get('legacy_name') or next(iter(metadata.get('runtime_identifiers', [])), identifier)
 args.component = runtime
+if (args.sm6225 or args.sm8250 or args.probe_only or args.no_verified_block) and runtime != 'NativeUfs':
+    parser.error('--sm6225, --sm8250, --probe-only and --no-verified-block select NativeUfs variants')
+if args.sm6225 and args.sm8250:
+    parser.error('--sm6225 and --sm8250 are mutually exclusive')
+if args.probe_only and args.no_verified_block:
+    parser.error('--probe-only and --no-verified-block are mutually exclusive')
 if args.verified_root_bundle and not args.verified_root:
     parser.error('A policy bundle requires verified block mode')
 if args.verified_root_bundle and args.negative_verified_block:
@@ -88,8 +100,15 @@ if component in ('NativeVirtioBlock', 'NativeRamBlock', 'NativeUfs'):
     if args.verified_root_bundle:
         command += ['-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1']
 if component == 'NativeUfs':
-    command += ['-I', str(ROOT / 'kits/VerifiedRoot/include'), '-I', str(ROOT / 'drivers/VirtioMmioBlock'),
-                '-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1', '-mgeneral-regs-only']
+    command += ['-I', str(ROOT / 'kits/VerifiedRoot/include'), '-I', str(ROOT / 'drivers/VirtioMmioBlock'), '-mgeneral-regs-only']
+    if args.probe_only:
+        command += ['-DNATIVE_UFS_PROBE_ONLY=1']
+    elif not args.no_verified_block:
+        command += ['-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1']
+    if args.sm6225:
+        command += ['-DNATIVE_UFS_SM6225=1']
+    if args.sm8250:
+        command += ['-DNATIVE_UFS_SM8250=1']
 if component=='NativeOfflineGPU':
     command += ['-I',str(ROOT/'drivers/VirtioMmioConsole')]
 if component in ('NativeLegacyDisplay','NativeHidInput'):
