@@ -41,6 +41,9 @@ jobs:
           UNIXNU_DEVICE: ${{ github.workspace }}/device
         run: ./unixnu defconfig qemu_defconfig
 
+      - name: Enable the kernel archives
+        run: echo 'CONFIG_XNU_BUILD_ARCHIVES=y' >> out/qemu/.config
+
       - name: Build the package
         env:
           UNIXNU_DEVICE: ${{ github.workspace }}/device
