@@ -15,6 +15,8 @@ jobs:
   build:
     runs-on: macos-26
     timeout-minutes: 360
+    env:
+      UNIXNU_UEFI: ${{ github.workspace }}/uefi
     steps:
       - name: Check out UniXNU
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -33,6 +35,14 @@ jobs:
           repository: xVanTuring/UniXNU-qemu
           ref: main
           path: qemu-device
+          token: ${{ github.token }}
+
+      - name: Check out the UEFI tree for fonts and display constants
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xVanTuring/uefi-tb128fu
+          ref: tb128fu
+          path: uefi
           token: ${{ github.token }}
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
