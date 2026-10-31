@@ -93,8 +93,10 @@ jobs:
 
       - name: Build the final kernel with the QEMU display reference
         run: |
-          mkdir -p out/tb128fu/tree/.cache/firmware/touch
+          mkdir -p out/tb128fu/tree/.cache/firmware/touch out/tb128fu/tree/.cache/firmware/gpu
           printf '\0' > out/tb128fu/tree/.cache/firmware/touch/Himax_firmware.bin
+          printf '\0' > out/tb128fu/tree/.cache/firmware/gpu/a610_zap.elf
+          printf '\0' > out/tb128fu/tree/.cache/firmware/gpu/a630_sqe.fw
           ./unixnu build kernel -D device
 
       - name: Build the payload
