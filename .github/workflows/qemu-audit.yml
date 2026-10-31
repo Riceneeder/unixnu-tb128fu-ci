@@ -27,6 +27,12 @@ jobs:
           path: device
           token: ${{ github.token }}
 
+      - name: Align the QEMU board with the current component names
+        run: |
+          sed -i '' 's/build-arm-driver.py NativeAES/build-arm-driver.py SoftwareAES/' device/board.toml
+          sed -i '' 's/build-native-aes-bindings.py/build-software-aes-bindings.py/' device/board.toml
+          sed -i '' 's#kits/NativePrelink/emit_prelink.py#kits/XnuPrelink/emit_prelink.py#' device/board.toml
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.13"
