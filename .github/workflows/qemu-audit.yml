@@ -32,6 +32,8 @@ jobs:
           sed -i '' 's/build-arm-driver.py NativeAES/build-arm-driver.py SoftwareAES/' device/board.toml
           sed -i '' 's/build-native-aes-bindings.py/build-software-aes-bindings.py/' device/board.toml
           sed -i '' 's#kits/NativePrelink/emit_prelink.py#kits/XnuPrelink/emit_prelink.py#' device/board.toml
+          mv device/scripts/build-arm-driver.py device/scripts/build-arm-driver.py.qemu
+          mv device/scripts/build-native-aes-bindings.py device/scripts/build-native-aes-bindings.py.qemu
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
