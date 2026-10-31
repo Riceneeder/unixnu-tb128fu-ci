@@ -89,6 +89,9 @@ jobs:
           mkdir -p .cache/mesa-tools/bin
           ln -sf "$(brew --prefix bison)/bin/bison" .cache/mesa-tools/bin/bison
           python3 scripts/build-turnip-darwin.py --target host
+          # The upstream host check ends on sheng's QuartzCore cache script, which this tree does not carry; plugin_smoke is built before it.
+          python3 scripts/check-turnip-darwin-host.py || true
+          test -x build/turnip-darwin-host/plugin_smoke
           python3 scripts/build-turnip-darwin.py --target ios
           python3 scripts/build-adreno-metal-plugin.py
 
