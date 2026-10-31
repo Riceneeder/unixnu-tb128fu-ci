@@ -95,7 +95,7 @@ jobs:
         run: |
           mkdir -p out/tb128fu/tree/.cache/firmware/touch out/tb128fu/tree/.cache/firmware/gpu
           base=https://raw.githubusercontent.com/vmoondance/vendor_lenovo_tb128fu/Los21/proprietary/vendor/firmware
-          curl -fsSL --retry 3 "$base/Himax_firmware.bin" -o out/tb128fu/tree/.cache/firmware/touch/Himax_firmware.bin
+          curl -fsSL --retry 3 "$base/Himax_mpfw.bin" -o out/tb128fu/tree/.cache/firmware/touch/Himax_firmware.bin
           curl -fsSL --retry 3 "$base/a610_zap.elf" -o out/tb128fu/tree/.cache/firmware/gpu/a610_zap.elf
           curl -fsSL --retry 3 "$base/a630_sqe.fw" -o out/tb128fu/tree/.cache/firmware/gpu/a630_sqe.fw
           ./unixnu build kernel -D device
