@@ -47,8 +47,14 @@ for name in ['NativeAdrenoMemory', 'NativeAdrenoSmmuMemory', 'NativeAdrenoVm', '
     core.append(obj)
 shim_obj = out / 'host_iokit_shim.o'
 subprocess.run(['xcrun', 'clang++', '-std=c++17', '-O1', '-fPIC', '-c', sim / 'host_iokit_shim.cpp', '-o', shim_obj], check=True)
+# The pinned Adreno740 user client calls proc_selfpid (XNU), which the host sim does not answer: provide it weakly here
+# (tests/XnuMemoryFixture.h lacks it upstream; the definition is weak so several objects may carry it).
+sim_stub_c = out / 'host_sim_stub.c'
+sim_stub_c.write_text('int proc_selfpid(void) { return 1; }\n')
+sim_stub = out / 'host_sim_stub.o'
+subprocess.run(['xcrun', 'clang', '-std=c11', '-O1', '-fPIC', '-c', sim_stub_c, '-o', sim_stub], check=True)
 shim = out / 'libhostiokit.dylib'
-subprocess.run(['xcrun', 'clang++', '-dynamiclib', '-o', shim, service, shim_obj, *core, *objects,
+subprocess.run(['xcrun', 'clang++', '-dynamiclib', '-o', shim, service, shim_obj, sim_stub, *core, *objects,
                 '-framework', 'IOKit', '-framework', 'CoreFoundation'], check=True)
 smoke = out / 'vulkan_smoke'
 subprocess.run(['xcrun', 'clang', '-std=c11', '-O1', '-I', '/opt/homebrew/include', sim / 'vulkan_smoke.c', '-o', smoke,
