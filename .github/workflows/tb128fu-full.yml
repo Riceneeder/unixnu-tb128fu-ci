@@ -57,6 +57,7 @@ jobs:
       - name: Prepare the QEMU observation
         env:
           UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           sed -i '' 's/build-arm-driver.py NativeAES/build-arm-driver.py SoftwareAES/' qemu-device/board.toml
           sed -i '' 's/build-native-aes-bindings.py/build-software-aes-bindings.py/' qemu-device/board.toml
