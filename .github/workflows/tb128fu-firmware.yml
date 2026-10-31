@@ -1,0 +1,80 @@
+name: TB128FU firmware
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  HOMEBREW_NO_ENV_HINTS: 1
+
+jobs:
+  firmware:
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - name: Check out UniXNU
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Check out the device repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Riceneeder/UniXNU-tb128fu
+          ref: main
+          path: device
+          token: ${{ github.token }}
+
+      - name: Check out the UEFI firmware
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xVanTuring/uefi-tb128fu
+          ref: tb128fu
+          path: uefi
+          submodules: recursive
+          token: ${{ github.token }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
+      - name: Install host tools
+        run: |
+          brew install llvm lld mtools dtc cmake ninja
+          if ! command -v unifdef >/dev/null; then brew install unifdef; fi
+
+      - name: Select the TB128FU configuration
+        env:
+          UNIXNU_DEVICE: ${{ github.workspace }}/device
+        run: ./unixnu defconfig tb128fu_defconfig
+
+      - name: Fetch the firmware sources
+        env:
+          UNIXNU_DEVICE: ${{ github.workspace }}/device
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./unixnu fetch
+
+      - name: Build the UniXNU package
+        env:
+          UNIXNU_DEVICE: ${{ github.workspace }}/device
+          UNIXNU_UEFI: ${{ github.workspace }}/uefi
+        run: ./unixnu build package
+
+      - name: Build the firmware volume
+        env:
+          UNIXNU_DEVICE: ${{ github.workspace }}/device
+          UNIXNU_UEFI: ${{ github.workspace }}/uefi
+        run: ./unixnu build firmware
+
+      - name: Upload the firmware volume
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: tb128fu-firmware-${{ github.run_attempt }}
+          path: |
+            uefi/Build/tb128fuPkg/DEBUG_CLANGPDB/FV/SILICIUM_UEFI.fd
+            out/tb128fu/logs/*.log
+          if-no-files-found: warn
+          retention-days: 7
