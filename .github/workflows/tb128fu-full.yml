@@ -92,7 +92,10 @@ jobs:
           ./unixnu defconfig tb128fu_defconfig -D device
 
       - name: Build the final kernel with the QEMU display reference
-        run: ./unixnu build kernel -D device
+        run: |
+          mkdir -p out/tb128fu/tree/.cache/firmware/touch
+          printf '\0' > out/tb128fu/tree/.cache/firmware/touch/Himax_firmware.bin
+          ./unixnu build kernel -D device
 
       - name: Build the payload
         env:
