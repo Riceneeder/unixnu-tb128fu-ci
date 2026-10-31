@@ -33,6 +33,7 @@ jobs:
           sed -i '' 's/build-native-aes-bindings.py/build-software-aes-bindings.py/' device/board.toml
           sed -i '' 's#kits/NativePrelink/emit_prelink.py#kits/XnuPrelink/emit_prelink.py#' device/board.toml
           sed -i '' 's/panic_screen = true/panic_screen = false/' device/board.toml
+          sed -i '' 's#build/native-prelink/#build/xnu-prelink/#g' device/scripts/build-storage-abi.py
           mv device/scripts/build-arm-driver.py device/scripts/build-arm-driver.py.qemu
           mv device/scripts/build-native-aes-bindings.py device/scripts/build-native-aes-bindings.py.qemu 2>/dev/null || true
 
