@@ -86,8 +86,10 @@ jobs:
         run: |
           cp device/board.toml /tmp/tb128fu-board.toml
           sed -i '' '/build-gop-legacy-display.py/d' device/board.toml
+          echo 'CONFIG_XNU_NATIVE_LEGACY_DISPLAY=n' >> out/tb128fu/.config
           ./unixnu build kernel -D device
           cp /tmp/tb128fu-board.toml device/board.toml
+          ./unixnu defconfig tb128fu_defconfig -D device
 
       - name: Build the final kernel with the QEMU display reference
         run: ./unixnu build kernel -D device
