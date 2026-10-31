@@ -100,6 +100,64 @@ jobs:
           curl -fsSL --retry 3 "$base/a630_sqe.fw" -o out/tb128fu/tree/.cache/firmware/gpu/a630_sqe.fw
           ./unixnu build kernel -D device
 
+      - name: Install the GPU user-space toolchain
+        run: |
+          brew install glslang bison shaderc vulkan-headers spirv-tools uv
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
+          fi
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" toolchain install 1.98.0 --profile minimal --no-self-update
+          "$HOME/.cargo/bin/rustup" target add aarch64-apple-ios --toolchain 1.98.0
+
+      - name: Fetch the pinned Mesa and metal2vulkan sources
+        run: |
+          cd out/tb128fu/tree
+          MESA=.cache/mesa-work
+          rm -rf "$MESA"
+          mkdir -p "$MESA"
+          git -C "$MESA" init -q
+          git -C "$MESA" remote add origin https://gitlab.freedesktop.org/mesa/mesa.git
+          if ! git -C "$MESA" -c protocol.version=2 fetch --depth 1 --filter=blob:none origin 85fda3b36405bcaea8bffc64aa4f2651dc90770d; then
+            git -C "$MESA" remote set-url origin https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa
+            git -C "$MESA" -c protocol.version=2 fetch --depth 1 --filter=blob:none origin 85fda3b36405bcaea8bffc64aa4f2651dc90770d
+          fi
+          python3 -c "import json;print('\n'.join(json.load(open('scripts/data/adreno-compiler-inputs.json'))['mesa']['sparse_directories']))" | xargs git -C "$MESA" sparse-checkout set
+          git -C "$MESA" checkout -q FETCH_HEAD
+          python3 -c "import json;print('\n'.join(json.load(open('scripts/data/adreno-compiler-inputs.json'))['patches']))" | while read -r patch; do
+            git -C "$MESA" apply "$PWD/$patch"
+          done
+          git -C "$MESA" diff --stat | tail -5
+
+          M2V=.cache/gpu-reference/metal2vulkan
+          rm -rf "$M2V"
+          mkdir -p "$M2V"
+          git -C "$M2V" init -q
+          git -C "$M2V" remote add origin https://github.com/steelbrain/metal2vulkan.git
+          git -C "$M2V" -c protocol.version=2 fetch --depth 1 --filter=blob:none origin 720ef1ce9ae2a2068999a8675717418b9416283e
+          git -C "$M2V" checkout -q FETCH_HEAD
+
+      - name: Build Turnip and the Adreno Metal plugin
+        run: |
+          cd out/tb128fu/tree
+          uv venv --allow-existing --python 3.13 .cache/mesa-venv
+          uv pip install --python .cache/mesa-venv/bin/python meson mako pyyaml packaging pycparser
+          mkdir -p .cache/mesa-tools/bin
+          ln -sf "$(brew --prefix bison)/bin/bison" .cache/mesa-tools/bin/bison
+          python3 scripts/build-turnip-darwin.py --target host
+          python3 scripts/build-turnip-darwin.py --target ios
+          python3 scripts/build-adreno-metal-plugin.py
+
+      - name: Build the GPU addon and the owner trust bundle
+        run: |
+          cd out/tb128fu/tree
+          mkdir -p build/original-static-system-trust
+          curl -fsSL --retry 3 -H "Authorization: Bearer ${{ github.token }}" \
+            https://raw.githubusercontent.com/Riceneeder/unixnu-tb128fu-ci/main/build-inputs/original-static-system.bundle \
+            -o build/original-static-system-trust/original-static-system.bundle
+          python3 scripts/make-gpu-addon.py --publish --clients iconservicesagent,Preferences build/tb128fu-gpu-addon.bin
+          python3 scripts/make-owner-trust-bundle.py
+
       - name: Build the payload
         env:
           UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
@@ -109,7 +167,9 @@ jobs:
           curl -fsSL --retry 3 -H "Authorization: Bearer ${{ github.token }}" \
             https://raw.githubusercontent.com/Riceneeder/unixnu-tb128fu-ci/main/build-inputs/original-static-system.bundle -o /tmp/trustcache
           ./unixnu build payload -D device --unique-chip-id "$UNIXNU_UNIQUE_CHIP_ID" \
-            --data-ramdisk /tmp/data.dbr --skip-setup --trust-cache /tmp/trustcache
+            --data-ramdisk /tmp/data.dbr --skip-setup \
+            --gpu-addon out/tb128fu/tree/build/tb128fu-gpu-addon.bin \
+            --owner-trust-cache out/tb128fu/tree/build/adreno-metal-plugin/owner-trust.bundle
 
       - name: Upload the kernel and payload
         if: always()
@@ -120,6 +180,9 @@ jobs:
             out/tb128fu/kernel/kernel.macho
             out/tb128fu/payload/payload.img
             out/tb128fu/payload/payload.json
+            out/tb128fu/tree/build/tb128fu-gpu-addon.bin
+            out/tb128fu/tree/build/adreno-metal-plugin/owner-trust.bundle
+            out/tb128fu/tree/build/adreno-metal-plugin/trust.json
             out/tb128fu/logs/*.log
           if-no-files-found: warn
           retention-days: 7
