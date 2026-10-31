@@ -103,7 +103,8 @@ jobs:
           curl -fsSL --retry 3 -H "Authorization: Bearer ${{ github.token }}" \
             https://raw.githubusercontent.com/Riceneeder/unixnu-tb128fu-ci/main/build-inputs/original-static-system.bundle \
             -o build/original-static-system-trust/original-static-system.bundle
-          python3 scripts/make-gpu-addon.py --publish --clients iconservicesagent,Preferences build/tb128fu-gpu-addon.bin
+          # Four user-client slots (s0 = backboardd): iconservicesagent renders icons, Preferences is Settings, PosterBoard draws wallpaper and widgets.
+          python3 scripts/make-gpu-addon.py --publish --clients iconservicesagent,Preferences,PosterBoard build/tb128fu-gpu-addon.bin
           python3 scripts/make-owner-trust-bundle.py
 
       - name: Upload the GPU addon
