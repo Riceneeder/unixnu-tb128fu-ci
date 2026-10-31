@@ -65,6 +65,8 @@ jobs:
         run: ./unixnu defconfig tb128fu_defconfig -D device
 
       - name: Prepare the TB128FU inputs
+        env:
+          DEVICE_DIR: ${{ github.workspace }}/device
         run: |
           mkdir -p out/tb128fu/tree/build/verified-root-os out/tb128fu/tree/build/storage-abi out/tb128fu/tree/build/xnu/ios-obj/EXPORT_HDRS/libsa
           cp "$DEVICE_DIR/owner-anchor.bin" out/tb128fu/tree/build/verified-root-os/trusted-key.bin
