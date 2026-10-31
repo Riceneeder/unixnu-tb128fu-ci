@@ -187,10 +187,10 @@ jobs:
           trust_cache_url=$(jq -r '.inputs.trust_cache_url // ""' "$GITHUB_EVENT_PATH")
           data_seed_url=$(jq -r '.inputs.data_seed_url // ""' "$GITHUB_EVENT_PATH")
           if [ -n "$trust_cache_url" ]; then
-            curl -fsSL --retry 3 "$trust_cache_url" -o "$RUNNER_TEMP/trustcache"
+            curl -fsSL --retry 3 -H "Authorization: Bearer ${{ github.token }}" "$trust_cache_url" -o "$RUNNER_TEMP/trustcache"
           fi
           if [ -n "$data_seed_url" ]; then
-            curl -fsSL --retry 3 "$data_seed_url" -o "$RUNNER_TEMP/data.dbr"
+            curl -fsSL --retry 3 -H "Authorization: Bearer ${{ github.token }}" "$data_seed_url" -o "$RUNNER_TEMP/data.dbr"
             if [ -n "$GROW_GIB" ]; then
               # seed-data-grow.py imports drivers/DarwinBoot/Test and keeps its scratch image in build/.
               git submodule update --init --depth 1 drivers/DarwinBoot
@@ -251,6 +251,17 @@ jobs:
           if [ -f "$RUNNER_TEMP/data.dbr" ]; then args+=(--data-ramdisk "$RUNNER_TEMP/data.dbr"); fi
           if [ "$SKIP_SETUP" = true ]; then args+=(--skip-setup); fi
           ./unixnu build payload "${args[@]}"
+
+      - name: Upload the payload
+        if: always() && steps.payload.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unixnu-${{ steps.check.outputs.board }}-payload-${{ inputs.defconfig }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.check.outputs.work }}/payload/payload.img
+            ${{ steps.check.outputs.work }}/payload/payload.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Collect the text logs
         id: logs
