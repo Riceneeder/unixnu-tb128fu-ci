@@ -1,0 +1,105 @@
+name: TB128FU full images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  HOMEBREW_NO_ENV_HINTS: 1
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - name: Check out UniXNU
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Check out the TB128FU device repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Riceneeder/UniXNU-tb128fu
+          ref: main
+          path: device
+          token: ${{ github.token }}
+
+      - name: Check out the QEMU device repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: xVanTuring/UniXNU-qemu
+          ref: main
+          path: qemu-device
+          token: ${{ github.token }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
+      - name: Install host tools
+        run: |
+          brew install llvm lld mtools dtc cmake ninja qemu openssl@3
+          if ! command -v unifdef >/dev/null; then brew install unifdef; fi
+
+      - name: Prepare the QEMU observation
+        env:
+          UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+        run: |
+          sed -i '' 's/build-arm-driver.py NativeAES/build-arm-driver.py SoftwareAES/' qemu-device/board.toml
+          sed -i '' 's/build-native-aes-bindings.py/build-software-aes-bindings.py/' qemu-device/board.toml
+          sed -i '' 's#kits/NativePrelink/emit_prelink.py#kits/XnuPrelink/emit_prelink.py#' qemu-device/board.toml
+          sed -i '' 's/panic_screen = true/panic_screen = false/' qemu-device/board.toml
+          mv qemu-device/scripts/build-arm-driver.py qemu-device/scripts/build-arm-driver.py.qemu
+          ./unixnu defconfig qemu_defconfig -D qemu-device
+          echo 'CONFIG_XNU_BUILD_ARCHIVES=y' >> out/qemu/.config
+          ./unixnu build package -D qemu-device
+          ./unixnu build kernel -D qemu-device
+          ./unixnu build payload -D qemu-device
+          cd out/qemu/tree
+          python3 scripts/build-display-abi.py
+
+      - name: Select the TB128FU configuration
+        run: ./unixnu defconfig tb128fu_defconfig -D device
+
+      - name: Prepare the TB128FU inputs
+        run: |
+          mkdir -p out/tb128fu/tree/build/verified-root-os out/tb128fu/tree/build/storage-abi out/tb128fu/tree/build/xnu/ios-obj/EXPORT_HDRS/libsa
+          cp "$DEVICE_DIR/owner-anchor.bin" out/tb128fu/tree/build/verified-root-os/trusted-key.bin
+          cp build-inputs/interface-audit.json out/tb128fu/tree/build/storage-abi/interface-audit.json
+
+      - name: Build a bootstrap kernel without the display archive
+        run: |
+          cp device/board.toml /tmp/tb128fu-board.toml
+          sed -i '' '/build-gop-legacy-display.py/d' device/board.toml
+          ./unixnu build kernel -D device
+          cp /tmp/tb128fu-board.toml device/board.toml
+
+      - name: Build the final kernel with the QEMU display reference
+        run: ./unixnu build kernel -D device
+
+      - name: Build the payload
+        env:
+          UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+        run: |
+          curl -fsSL --retry 3 -H "Authorization: Bearer ${{ github.token }}" \
+            https://raw.githubusercontent.com/Riceneeder/unixnu-tb128fu-ci/main/build-inputs/owner-data-8g.dbr -o /tmp/data.dbr
+          curl -fsSL --retry 3 -H "Authorization: Bearer ${{ github.token }}" \
+            https://raw.githubusercontent.com/Riceneeder/unixnu-tb128fu-ci/main/build-inputs/original-static-system.bundle -o /tmp/trustcache
+          ./unixnu build payload -D device --unique-chip-id "$UNIXNU_UNIQUE_CHIP_ID" \
+            --data-ramdisk /tmp/data.dbr --skip-setup --trust-cache /tmp/trustcache
+
+      - name: Upload the kernel and payload
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: tb128fu-full-${{ github.run_attempt }}
+          path: |
+            out/tb128fu/kernel/kernel.macho
+            out/tb128fu/payload/payload.img
+            out/tb128fu/payload/payload.json
+            out/tb128fu/logs/*.log
+          if-no-files-found: warn
+          retention-days: 7
