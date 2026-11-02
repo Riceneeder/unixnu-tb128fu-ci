@@ -90,6 +90,11 @@
     "title_zh": "Xiaomi Mi 9 (c0der88)"
   },
   {
+    "name": "cepheus-didazhiqian",
+    "title": "Xiaomi Mi 9 (cepheus) (didazhiqian)",
+    "title_zh": "Xiaomi Mi 9 (cepheus) (didazhiqian)"
+  },
+  {
     "name": "cepheus-yangqi0408",
     "title": "Xiaomi Mi 9 (cepheus) (YangQi0408)",
     "title_zh": "Xiaomi Mi 9 (cepheus) (YangQi0408)"
@@ -438,6 +443,11 @@
     "name": "komodo",
     "title": "Google Pixel 9 Pro XL (komodo)",
     "title_zh": "Google Pixel 9 Pro XL（komodo）"
+  },
+  {
+    "name": "lafa",
+    "title": "realme GT8 Pro (lafa) RMX5200: UniXNU bring-up",
+    "title_zh": "realme GT8 Pro (lafa) RMX5200: UniXNU bring-up"
   },
   {
     "name": "lemonades",
@@ -830,6 +840,11 @@
     "title_zh": "Xiaomi Pad 6S Pro (FFT-infra)"
   },
   {
+    "name": "sheng-ht94911",
+    "title": "Xiaomi Pad 6S Pro (ht94911)",
+    "title_zh": "Xiaomi Pad 6S Pro (ht94911)"
+  },
+  {
     "name": "sheng-hxzbaka",
     "title": "Xiaomi Pad 6S Pro (hxzbaka)",
     "title_zh": "Xiaomi Pad 6S Pro (hxzbaka)"
@@ -845,6 +860,11 @@
     "title_zh": "Xiaomi Pad 6S Pro (jsongmax)"
   },
   {
+    "name": "sheng-kkkpc",
+    "title": "Xiaomi Pad 6S Pro (kkkpc)",
+    "title_zh": "Xiaomi Pad 6S Pro (kkkpc)"
+  },
+  {
     "name": "sheng-liangkam",
     "title": "Xiaomi Pad 6S Pro (LiangKam)",
     "title_zh": "Xiaomi Pad 6S Pro (LiangKam)"
@@ -853,6 +873,11 @@
     "name": "sheng-lilinnan",
     "title": "Xiaomi Pad 6S Pro (lilinnan)",
     "title_zh": "Xiaomi Pad 6S Pro (lilinnan)"
+  },
+  {
+    "name": "sheng-lithosss",
+    "title": "Xiaomi Pad 6S Pro (Lithosss)",
+    "title_zh": "Xiaomi Pad 6S Pro (Lithosss)"
   },
   {
     "name": "sheng-macos",
@@ -1030,6 +1055,11 @@
     "title_zh": "unixnu-build"
   },
   {
+    "name": "venus",
+    "title": "Xiaomi Mi 11 M2011K2C: single-CPU platform bring-up",
+    "title_zh": "Xiaomi Mi 11 M2011K2C: single-CPU platform bring-up"
+  },
+  {
     "name": "vermeer",
     "title": "Redmi K70 (vermeer)",
     "title_zh": "Redmi K70（vermeer）"
@@ -1048,6 +1078,11 @@
     "name": "vermeer-yyx2025",
     "title": "Redmi K70 (yyx2025)",
     "title_zh": "Redmi K70 (yyx2025)"
+  },
+  {
+    "name": "vili",
+    "title": "Xiaomi 11T Pro (vili, 2107113SG), SM8350 / Snapdragon 888",
+    "title_zh": "Xiaomi 11T Pro (vili, 2107113SG), SM8350 / Snapdragon 888"
   },
   {
     "name": "wayne",
